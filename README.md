@@ -1,27 +1,25 @@
 ## Mentorship Platform Frontend
-React + Vite SPA for the mentorship platform backend.  
-Provides modern UI for:
-- Parent & Mentor authentication
-- Parent dashboard (manage students, view bookings, book lessons)
-- Mentor dashboard (create lessons & manage sessions)
-- LLM summarization UI (talking to `/llm/summarize`)
----
-## Tech Stack
-- **Framework**: React 18
-- **Bundler/Dev server**: Vite
-- **Routing**: `react-router-dom` v6
-- **HTTP client**: `axios`
----
-## Project Structure
-```text
+
+React + Vite single-page app for the Mentorship Platform backend. It provides UI for authentication, parent and mentor dashboards, and an LLM-powered summarizer.
+
+## Tech stack
+
+- Framework: React 18
+- Bundler / dev server: Vite
+- Routing: react-router-dom v6
+- HTTP client: axios
+
+## Project layout (important files)
+
+```
 frontend/
   src/
-    main.jsx            # Entry, ReactDOM + BrowserRouter
-    App.jsx             # Routes + layout
-    styles.css          # Global styling (dark, animated)
+    main.jsx            # App entry (ReactDOM + BrowserRouter)
+    App.jsx             # Routes and layout
+    styles.css          # Global styling
     shared/
       apiClient.js      # Axios instance (base URL from env)
-      ConfirmModal.jsx  # Reusable confirmation modal (delete dialogs)
+      ConfirmModal.jsx  # Reusable confirmation modal
     modules/
       auth/
         AuthContext.jsx
@@ -33,169 +31,77 @@ frontend/
         MentorDashboard.jsx
       llm/
         SummarizePage.jsx
-Environment Variables
-The frontend reads the backend URL from a Vite env var:
+```
 
-VITE_API_BASE_URL=http://localhost:4000
-Create frontend/.env (you can copy from .env.example) and adjust as needed:
+## Environment variables
 
+The frontend reads the backend URL from `VITE_API_BASE_URL`. By default the app expects the backend at `http://localhost:4000`.
+
+Create a local env file (copy the example) and adjust if needed:
+
+```bash
 cp frontend/.env.example frontend/.env
-Note: Vite only exposes variables prefixed with VITE_ to the browser.
+# or on Windows PowerShell
+Copy-Item frontend\.env.example frontend\.env
+```
 
-Running the Frontend
-From the frontend directory:
+Example value in `.env`:
 
+```
+VITE_API_BASE_URL=http://localhost:4000
+```
+
+Note: Vite only exposes variables that begin with `VITE_` to the browser.
+
+## Run the frontend (development)
+
+From the `frontend` folder:
+
+```bash
 cd frontend
 npm install
 npm run dev
-Vite will start on http://localhost:5173 by default.
+```
 
-Make sure the backend is running on http://localhost:4000 (or update VITE_API_BASE_URL).
+Vite will start the dev server (default http://localhost:5173). Ensure the backend is running at the URL configured in `VITE_API_BASE_URL`.
 
-Application Flow
-Auth
-Signup (/signup)
+## Application flow (summary)
 
-User chooses role: PARENT or MENTOR.
-Sends POST /auth/signup to the backend.
-Login (/login)
+- Auth: Signup (`/auth/signup`) and Login (`/auth/login`) use the backend endpoints. On login the JWT and user info are stored in `localStorage` and the token is added to `apiClient` headers.
+- Redirects: after login users are redirected by their role to `/parent` (PARENT) or `/mentor` (MENTOR).
+- Protected pages: the app protects routes based on authentication and role via the `AuthContext` and route wrappers.
 
-Sends POST /auth/login.
-On success:
-JWT token and user info stored in localStorage.
-Token added to Authorization header for all axios requests.
-Redirects to:
-/parent for parents
-/mentor for mentors
-Auth state is managed by AuthContext:
+## Key pages / features
 
-AuthContext.jsx reads token + user from localStorage on load.
-Provides login, logout, user, and token.
-Protected routes (ProtectedRoute in App.jsx) ensure only logged‑in users (with the right role) can access parent/mentor dashboards and the summarize page.
-Pages
-Home (/)
-Marketing‑style hero explaining the platform.
-Calls‑to‑action:
-“Create an account” → /signup
-“Try AI summarizer” → /summarize
-Login (/login)
-Two‑column layout:
-Left: glass card with login form (“Sign in to your space”).
-Right: animated “orbit” illustration and supporting copy.
-Form:
-{
-  "email": "you@example.com",
-  "password": "••••••••"
-}
-On success:
-Stores token + user.
-Redirects by role.
-Signup (/signup)
-Similar aesthetic to login.
-Allows choosing PARENT or MENTOR.
-Form:
-{
-  "name": "Full name",
-  "email": "you@example.com",
-  "password": "secret",
-  "role": "PARENT" | "MENTOR"
-}
-Parent Dashboard (/parent)
-Requires role PARENT.
+- Home (`/`): marketing-style landing and links to signup or the summarizer.
+- Login (`/login`) and Signup (`/signup`) pages.
+- Parent dashboard (`/parent`): manage students (`POST /students`), view bookings (`GET /bookings`), create/delete bookings (`POST /bookings`, `DELETE /bookings/:id`).
+- Mentor dashboard (`/mentor`): create lessons (`POST /lessons`), view lesson sessions (`GET /lessons/:id/sessions`), create/delete sessions (`POST /sessions`, `DELETE /sessions/:id`).
+- Summarizer (`/summarize`): POST text to `/llm/summarize` and display the returned summary and model name.
 
-Create Student form:
-Fields: name, age.
-Sends POST /students.
-My Students list:
-GET /students.
-Shows all students belonging to the logged‑in parent.
-My Bookings:
-GET /bookings.
-Displays which student is booked for which lesson, e.g. chirag → Creative Writing.
-Each booking has a Delete button:
-Opens a confirmation modal (ConfirmModal).
-On confirm, calls DELETE /bookings/:id and refreshes the list.
-Book Lesson for Student:
-Student select bound to the parent’s students.
-Lesson select bound to all lessons (GET /lessons).
-On submit, sends POST /bookings with { studentId, lessonId }.
-Shows success/error messages.
-Mentor Dashboard (/mentor)
-Requires role MENTOR.
+## Shared components
 
-Create Lesson
-Fields: title, description.
-Sends POST /lessons with mentorId from the logged‑in user.
-Lessons are loaded from GET /lessons on mount, so existing demo lessons (from the backend seed script) appear automatically.
-Sessions panel
-Lesson dropdown:
-Selecting a lesson triggers GET /lessons/:id/sessions and populates the “Existing sessions” list.
-Create Session form:
-Fields: lessonId, date, topic, summary.
-Date defaults to the current date/time and is formatted for a datetime-local input.
-Sends POST /sessions.
-On success, clears the form, resets the date to “now”, and refreshes the sessions list for that lesson.
-Existing sessions list:
-Shows session date/time and topic for the selected lesson.
-Each session has a Delete button:
-Opens a confirmation modal.
-On confirm, calls DELETE /sessions/:id and reloads the list.
-Summarize Notes (/summarize)
-Requires any authenticated user (parent or mentor).
+- `src/shared/apiClient.js`: axios instance. Example:
 
-Textarea for long session/lesson notes.
-Sends POST /llm/summarize with:
-{
-  "text": "long text..."
-}
-Displays:
-Summary text (max ~120 words, generated by Google Gemini via the backend).
-Model name returned from backend.
-Handles errors:
-Shows validation messages from backend (400 / 413).
-Shows rate‑limit message (429) if too many summarize calls.
-Styling & UX
-Dark, gradient background with subtle radial glows.
-Glassmorphism cards and sticky blurred header.
-Reusable buttons:
-.btn-primary – gradient call‑to‑action.
-.btn-ghost – bordered secondary action.
-.btn-danger – red destructive action (used in delete dialogs).
-.btn-icon – small outlined button for inline Delete actions.
-Layouts:
-layout-two-column for dashboards.
-auth-layout for login/signup pages.
-Animations:
-.fade-in for soft entrance.
-floatIn for cards.
-orbitPulse for the auth orbit illustration.
-Shared modal styles:
-.modal-overlay, .modal-box, .modal-actions for confirmation dialogs.
-All styles live in src/styles.css.
-
-Shared Components
-apiClient
-src/shared/apiClient.js:
-
+```js
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
 });
-AuthContext sets the Authorization header globally when a user logs in:
+```
 
-apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-Make sure:
+Auth code sets `apiClient.defaults.headers.common.Authorization = `Bearer ${token}`` on login so requests include the JWT.
 
-Backend is running at the same URL as VITE_API_BASE_URL.
-You have created at least one Parent/Mentor account via the signup page before logging in.
-ConfirmModal
-src/shared/ConfirmModal.jsx:
+- `src/shared/ConfirmModal.jsx`: reusable confirmation modal used for delete actions. Props: `isOpen`, `onClose`, `onConfirm`, `title`, `message`, `confirmLabel`, `confirmDisabled`, `variant`.
 
-Props:
-isOpen, onClose, onConfirm
-title, message
-confirmLabel (e.g. "Delete", "Deleting...")
-confirmDisabled (disables buttons during requests)
-variant ('danger' or default 'primary' to pick button style)
-Used for:
-Cancelling bookings in the Parent dashboard.
-Deleting sessions in the Mentor dashboard.
+## Styling & UX
+
+- Dark, gradient backgrounds, glassmorphism cards, and a simple, reusable set of button classes (`.btn-primary`, `.btn-ghost`, `.btn-danger`, `.btn-icon`).
+- Global styles are in `src/styles.css`.
+
+## Notes
+
+- Ensure `VITE_API_BASE_URL` points to your running backend.
+- Create at least one Parent or Mentor account via the signup UI before testing role-protected routes.
+
+---
+If you'd like, I can also update `frontend/.env.example` or add a short troubleshooting section. 
